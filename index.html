@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON ⇄ XLSX Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .converters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .converters {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .converter-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .converter-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .xlsx-icon {
+            color: #217346;
+        }
+
+        .json-icon {
+            color: #f39c12;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .card-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .file-input-label:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            color: #667eea;
+        }
+
+        .file-input:focus + .file-input-label {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        .file-selected {
+            border-color: #28a745 !important;
+            background: #f8fff9 !important;
+            color: #28a745 !important;
+        }
+
+        .file-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .features h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>JSON ⇄ XLSX Converter</h1>
+            <p>Convert between JSON and Excel formats instantly</p>
+        </div>
+
+        <div class="converters">
+            <!-- XLSX to JSON Converter -->
+            <div class="converter-card">
+                <div class="card-header">
+                    <span class="card-icon xlsx-icon">📊</span>
+                    <h2 class="card-title">XLSX to JSON</h2>
+                    <p class="card-subtitle">Convert Excel files to JSON format</p>
+                </div>
+
+                <form class="upload-form" id="xlsx-form">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="xlsx-file" name="file" class="file-input" accept=".xlsx,.xls" required>
+                        <label for="xlsx-file" class="file-input-label">
+                            <span class="file-icon">📁</span>
+                            <span class="file-text">Choose XLSX file</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="xlsx-btn">
+                        <span class="btn-text">Convert to JSON</span>
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Converting...
+                        </div>
+                    </button>
+
+                    <div class="message" id="xlsx-message"></div>
+                </form>
+            </div>
+
+            <!-- JSON to XLSX Converter -->
+            <div class="converter-card">
+                <div class="card-header">
+                    <span class="card-icon json-icon">{ }</span>
+                    <h2 class="card-title">JSON to XLSX</h2>
+                    <p class="card-subtitle">Convert JSON files to Excel format</p>
+                </div>
+
+                <form class="upload-form" id="json-form">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="json-file" name="file" class="file-input" accept=".json" required>
+                        <label for="json-file" class="file-input-label">
+                            <span class="file-icon">📁</span>
+                            <span class="file-text">Choose JSON file</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="json-btn">
+                        <span class="btn-text">Convert to XLSX</span>
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Converting...
+                        </div>
+                    </button>
+
+                    <div class="message" id="json-message"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // File input change handlers
+        document.getElementById('xlsx-file').addEventListener('change', function(e) {
+            const label = document.querySelector('label[for="xlsx-file"]');
+            const fileText = label.querySelector('.file-text');
+
+            if (e.target.files.length > 0) {
+                fileText.textContent = e.target.files[0].name;
+                label.classList.add('file-selected');
+            } else {
+                fileText.textContent = 'Choose XLSX file';
+                label.classList.remove('file-selected');
+            }
+        });
+
+        document.getElementById('json-file').addEventListener('change', function(e) {
+            const label = document.querySelector('label[for="json-file"]');
+            const fileText = label.querySelector('.file-text');
+
+            if (e.target.files.length > 0) {
+                fileText.textContent = e.target.files[0].name;
+                label.classList.add('file-selected');
+            } else {
+                fileText.textContent = 'Choose JSON file';
+                label.classList.remove('file-selected');
+            }
+        });
+
+        // Form submission handlers
+        document.getElementById('xlsx-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleFormSubmit(this, 'marker-xlsx-to-json', 'xlsx');
+        });
+
+        document.getElementById('json-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await handleFormSubmit(this, 'marker-json-to-xlsx', 'json');
+        });
+
+        // Generic form submission handler
+        async function handleFormSubmit(form, endpoint, type) {
+            const fileInput = form.querySelector('input[type="file"]');
+            const button = form.querySelector('.submit-btn');
+            const btnText = button.querySelector('.btn-text');
+            const loading = button.querySelector('.loading');
+            const message = form.querySelector('.message');
+
+            // Validate file selection
+            if (!fileInput.files.length) {
+                showMessage(message, 'Please select a file first.', 'error');
+                return;
+            }
+
+            // Show loading state
+            button.disabled = true;
+            btnText.style.display = 'none';
+            loading.style.display = 'flex';
+            hideMessage(message);
+
+            try {
+                // Create FormData
+                let formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                // Send request
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Handle successful response
+                    const blob = await response.blob();
+                    const filename = getFilenameFromResponse(response, type);
+                    downloadFile(blob, filename);
+                    showMessage(message, 'File converted successfully!', 'success');
+                } else {
+                    // Handle error response
+                    const errorText = await response.text();
+                    showMessage(message, `Error: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                showMessage(message, `Network error: ${error.message}`, 'error');
+            } finally {
+                // Reset button state
+                button.disabled = false;
+                btnText.style.display = 'block';
+                loading.style.display = 'none';
+            }
+        }
+
+        // Get filename from response headers or generate default
+        function getFilenameFromResponse(response, type) {
+            const contentDisposition = response.headers.get('Content-Disposition');
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    return filenameMatch[1];
+                }
+            }
+
+            // Generate default filename
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            return type === 'xlsx' ? `converted_${timestamp}.json` : `converted_${timestamp}.xlsx`;
+        }
+
+        // Download file function
+        function downloadFile(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Message display functions
+        function showMessage(messageEl, text, type) {
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            messageEl.style.display = 'block';
+        }
+
+        function hideMessage(messageEl) {
+            messageEl.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
