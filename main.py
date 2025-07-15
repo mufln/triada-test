@@ -8,9 +8,8 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, Response
 
 app = FastAPI()
-with open("index.html", 'r') as f:
-    html = f.read()
-
+file = open("index.html", 'r', encoding='utf-8')
+html = file.read()
 
 @app.get("/")
 async def index(request: Request):
